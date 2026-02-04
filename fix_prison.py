@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Prison Architect Save Editor
+Prison Architect Save Fixer
 Исправляет зависшие задачи строительства в сейвах игры, также помогает с переносом сейвов нужную папку
 """
 import os
