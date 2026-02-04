@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Prison Architect Construction Fixer
-Исправляет зависшие задачи строительства в сейвах игры
+Prison Architect Save Editor
+Исправляет зависшие задачи строительства в сейвах игры, также помогает с переносом сейвов нужную папку
 """
 import os
 import sys
@@ -94,6 +94,43 @@ class PrisonSaveFixer:
                 filepath = self.saves_path / normalized
 
         return filepath if filepath.exists() else None
+
+    def resolve_transfer_path(self, user_input: str) -> Optional[Path]:
+        """Обрабатывает ввод для переноса: полный путь к файлу, папке или ключевые слова (Загрузки/Документы)"""
+        # Обработка ключевых слов (пока только загрузка и документы)
+        if user_input.lower() in ('загрузки', 'загрузка', 'downloads'):
+            if sys.platform == 'win32':
+                path = Path.home() / "Downloads"
+            elif sys.platform == 'darwin':
+                path = Path.home() / "Downloads"
+            else:
+                path = Path.home() / "Downloads"
+            return path if path.exists() else None
+
+        if user_input.lower() in ('документы', 'документ', 'documents'):
+            if sys.platform == 'win32':
+                path = Path.home() / "Documents"
+            elif sys.platform == 'darwin':
+                path = Path.home() / "Documents"
+            else:
+                path = Path.home() / "Documents"
+            return path if path.exists() else None
+
+        # обработка как абсолютного пути
+        path = Path(user_input)
+        if path.exists():
+            return path
+        return None
+
+    def find_prison_files_in_folder(self, folder: Path) -> List[Path]:
+        """Находит все .prison файлы в указанной папке"""
+        if not folder or not folder.exists() or not folder.is_dir():
+            return []
+        return sorted(
+            [f for f in folder.glob("*.prison") if f.is_file()],
+            key=lambda x: x.stat().st_mtime,
+            reverse=True
+        )
 
     def create_backup(self, filepath: Path) -> Optional[Path]:
         """Создаёт резервную копию файла с суффиксом 'copy' перед расширением"""
@@ -197,6 +234,141 @@ class PrisonSaveFixer:
             traceback.print_exc()
             return False
 
+    def transfer_save(self, source_file: Path) -> bool:
+        """Переносит сейв и скриншот в папку сохранений игры"""
+        if not self.saves_path:
+            print(f"{Color.RED}✗ Не найдена папка сохранений игры{Color.END}")
+            return False
+
+        try:
+            dest_file = self.saves_path / source_file.name
+            screenshot_src = source_file.with_suffix('.png')
+            screenshot_dest = self.saves_path / screenshot_src.name
+
+            print(f"\n{Color.BLUE}Копирование файла:{Color.END} {source_file.name}")
+            shutil.copy2(source_file, dest_file)
+            print(f"{Color.GREEN}Сейв скопирован:{Color.END} {dest_file}")
+
+            if screenshot_src.exists():
+                print(
+                    f"{Color.BLUE}Копирование скриншота:{Color.END} {screenshot_src.name}")
+                shutil.copy2(screenshot_src, screenshot_dest)
+                print(
+                    f"{Color.GREEN}Скриншот скопирован:{Color.END} {screenshot_dest}")
+            else:
+                print(
+                    f"{Color.YELLOW}Скриншот не найден:{Color.END} {screenshot_src.name}")
+
+            return True
+        except Exception as e:
+            print(f"{Color.RED}Ошибка копирования: {e}{Color.END}")
+            return False
+
+    def transfer_mode(self):
+        """Режим переноса сейва из произвольной папки или файла"""
+        print(
+            f"\n{Color.BOLD}{Color.CYAN}╔════════════════════════════════════╗")
+        print(f"║        Перенос сейва в игру        ║")
+        print(f"╚════════════════════════════════════╝{Color.END}")
+        print(f"\n{Color.BLUE}Папка сохранений игры:{Color.END} {self.saves_path}")
+        print(f"\n{Color.YELLOW}Введите путь к файлу .prison или папке:{Color.END}")
+        print("  • Полный путь к файлу: C:\\Users\\Имя\\Downloads\\101.prison")
+        print("  • Путь к папке:        C:\\Users\\Имя\\Downloads")
+        print("  • Ключевые слова:      Загрузки, Документы")
+        print(f"\n{Color.YELLOW}Путь (или 0 для отмены):{Color.END}")
+
+        try:
+            user_input = input(f"{Color.CYAN}> {Color.END}").strip()
+            if user_input == '0':
+                self.show_menu()
+                return
+
+            path = self.resolve_transfer_path(user_input)
+            if not path:
+                print(f"{Color.RED}Путь не найден: {user_input}{Color.END}")
+                input(
+                    f"\n{Color.YELLOW}Нажмите Enter для возврата в меню...{Color.END}")
+                self.transfer_mode()
+                return
+
+            # Если это файл .prison — используем его напрямую
+            if path.is_file() and path.suffix.lower() == '.prison':
+                source_file = path
+            # Если это папка — показываем список файлов для выбора
+            elif path.is_dir():
+                saves = self.find_prison_files_in_folder(path)
+                if not saves:
+                    print(
+                        f"{Color.RED}✗ В папке не найдено файлов .prison{Color.END}")
+                    input(
+                        f"\n{Color.YELLOW}Нажмите Enter для повторной попытки...{Color.END}")
+                    self.transfer_mode()
+                    return
+
+                print(
+                    f"\n{Color.GREEN}Найдено {len(saves)} сейвов в папке {path}:{Color.END}\n")
+                for idx, save in enumerate(saves, 1):
+                    mtime = save.stat().st_mtime
+                    from datetime import datetime
+                    dt = datetime.fromtimestamp(
+                        mtime).strftime('%Y-%m-%d %H:%M')
+                    size_mb = save.stat().st_size / 1024 / 1024
+                    print(
+                        f"  {idx:2d}. {save.name:<30} [{dt}] ({size_mb:.1f} МБ)")
+
+                print(
+                    f"\n{Color.YELLOW}Выберите номер сейва (или 0 для отмены):{Color.END}")
+                try:
+                    choice = int(input(f"{Color.CYAN}> {Color.END}").strip())
+                    if choice == 0:
+                        self.transfer_mode()
+                        return
+                    if 1 <= choice <= len(saves):
+                        source_file = saves[choice - 1]
+                    else:
+                        print(f"{Color.RED}Неверный номер{Color.END}")
+                        input(
+                            f"\n{Color.YELLOW}Нажмите Enter для повторной попытки...{Color.END}")
+                        self.transfer_mode()
+                        return
+                except ValueError:
+                    print(f"{Color.RED}Введите число{Color.END}")
+                    input(
+                        f"\n{Color.YELLOW}Нажмите Enter для повторной попытки...{Color.END}")
+                    self.transfer_mode()
+                    return
+            else:
+                print(
+                    f"{Color.RED}Указанный путь не является файлом .prison или папкой{Color.END}")
+                input(
+                    f"\n{Color.YELLOW}Нажмите Enter для повторной попытки...{Color.END}")
+                self.transfer_mode()
+                return
+
+            print(f"\n{Color.BLUE}Выбран файл:{Color.END} {source_file}")
+            confirm = input(
+                f"{Color.YELLOW}Перенести этот сейв в игру? (да/нет): {Color.END}").strip().lower()
+            if confirm in ('да', 'д', 'yes', 'y'):
+                if self.transfer_save(source_file):
+                    print(
+                        f"\n{Color.GREEN}Перенос завершён успешно!{Color.END}")
+                    dest_file = self.saves_path / source_file.name
+                    fix_choice = input(
+                        f"{Color.YELLOW}Исправить зависшие задачи в этом сейве? (да/нет): {Color.END}").strip().lower()
+                    if fix_choice in ('да', 'д', 'yes', 'y'):
+                        self.fix_construction_block(dest_file)
+                else:
+                    print(f"\n{Color.RED}Не удалось перенести сейв{Color.END}")
+            else:
+                print(f"{Color.YELLOW}Операция отменена{Color.END}")
+
+        except KeyboardInterrupt:
+            print("\n\nПрервано пользователем.")
+            return
+
+        input(f"\n{Color.YELLOW}Нажмите Enter для возврата в меню...{Color.END}")
+        self.show_menu()
+
     def show_menu(self):
         """Отображает главное меню и обрабатывает выбор пользователя"""
         print(
@@ -214,11 +386,13 @@ class PrisonSaveFixer:
 
         while True:
             print(f"{Color.YELLOW}Выберите режим работы:{Color.END}")
-            print("  1. Автоматическое сканирование (показать список сейвов)")
-            print("  2. Ручной ввод (имя файла или полный путь)")
+            print(
+                "  1. Исправление: Автоматическое сканирование (показать список сейвов)")
+            print("  2. Исправление: Ручной ввод (имя файла или полный путь)")
+            print("  3. Перенос сейва из другой папки")
             print("  0. Выход\n")
 
-            choice = input(f"{Color.CYAN}Ваш выбор (0-2): {Color.END}").strip()
+            choice = input(f"{Color.CYAN}Ваш выбор (0-3): {Color.END}").strip()
 
             if choice == '1':
                 self.auto_scan_mode()
@@ -226,12 +400,15 @@ class PrisonSaveFixer:
             elif choice == '2':
                 self.manual_mode()
                 break
+            elif choice == '3':
+                self.transfer_mode()
+                break
             elif choice == '0':
                 print("\nДо свидания!")
                 break
             else:
                 print(
-                    f"{Color.RED}Неверный выбор. Пожалуйста, введите 0, 1 или 2.{Color.END}\n")
+                    f"{Color.RED}Неверный выбор. Пожалуйста, введите 0, 1, 2 или 3.{Color.END}\n")
 
     def auto_scan_mode(self):
         """Режим автоматического сканирования папки сохранений"""
