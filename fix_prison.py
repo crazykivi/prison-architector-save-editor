@@ -442,12 +442,12 @@ class PrisonSaveFixer:
                     f"\n{Color.BLUE}Выбран сейв:{Color.END} {selected_file.name}")
                 if self.fix_construction_block(selected_file):
                     print(
-                        f"\n{Color.GREEN}✅ Исправление завершено успешно!{Color.END}")
+                        f"\n{Color.GREEN}Исправление завершено успешно!{Color.END}")
                     print(
                         "Теперь можно загрузить сохранение в игре — зависшие строители должны исчезнуть.\n")
                 else:
                     print(
-                        f"\n{Color.RED}❌ Не удалось исправить файл. Проверьте его структуру.{Color.END}\n")
+                        f"\n{Color.RED}Не удалось исправить файл. Проверьте его структуру.{Color.END}\n")
             else:
                 print(f"{Color.RED}Неверный номер сейва.{Color.END}\n")
         except ValueError:
@@ -495,12 +495,12 @@ class PrisonSaveFixer:
             if confirm in ('да', 'д', 'yes', 'y'):
                 if self.fix_construction_block(filepath):
                     print(
-                        f"\n{Color.GREEN}✅ Исправление завершено успешно!{Color.END}")
+                        f"\n{Color.GREEN}Исправление завершено успешно!{Color.END}")
                     print(
                         "Теперь можно загрузить сохранение в игре — зависшие строители должны исчезнуть.\n")
                 else:
                     print(
-                        f"\n{Color.RED}❌ Не удалось исправить файл. Проверьте его структуру.{Color.END}\n")
+                        f"\n{Color.RED}Не удалось исправить файл. Проверьте его структуру.{Color.END}\n")
             else:
                 print(f"{Color.YELLOW}Операция отменена.{Color.END}\n")
 
