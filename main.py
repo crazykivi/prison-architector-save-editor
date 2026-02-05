@@ -198,9 +198,9 @@ def transfer_mode(fixer: PrisonSaveFixer):
 def show_menu(fixer: PrisonSaveFixer):
     """Главное меню с поддержкой плагинов"""
     print(
-        f"\n{Color.BOLD}{Color.CYAN}╔══════════════════════════════════════════════╗")
+        f"\n{Color.BOLD}{Color.CYAN}╔═══════════════════════════════════════╗")
     print(f"║   Prison Architect Save Editor v1.1   ║")
-    print(f"╚══════════════════════════════════════════════╝{Color.END}\n")
+    print(f"╚═══════════════════════════════════════╝{Color.END}\n")
 
     if not fixer.saves_path or not fixer.saves_path.exists():
         print(f"{Color.RED}✗ Не удалось найти папку сохранений игры!{Color.END}")
@@ -212,9 +212,9 @@ def show_menu(fixer: PrisonSaveFixer):
 
     # Базовые пункты меню
     options = [
-        ("1", "Исправление: Автоматическое сканирование (показать список сейвов)", auto_scan_mode),
-        ("2", "Исправление: Ручной ввод (имя файла или полный путь)", manual_mode),
-        ("3", "Перенос сейва из другой папки", transfer_mode),
+        ("1", "Исправление сейва: Автоматическое сканирование (показать список сейвов)", auto_scan_mode),
+        ("2", "Исправление сейва: Ручной ввод (имя файла или полный путь)", manual_mode),
+        ("3", "Помощь: Перенос сейва из папки в папку с сохранениями", transfer_mode),
     ]
 
     # Добавление плагинов
@@ -224,9 +224,25 @@ def show_menu(fixer: PrisonSaveFixer):
 
     options.append(("0", "Выход", None))
 
-    # Вывод меню
-    for key, text, _ in options:
+    # Вывод меню (старый обычный вывод)
+    # for key, text, _ in options:
+    #     print(f"  {key}. {text}")
+    # Вывод меню с категориями
+    print(f"{Color.BOLD}{Color.BLUE}Исправления быстрого строительства:{Color.END}")
+    for key, text, _ in options[:2]:
         print(f"  {key}. {text}")
+
+    print(f"\n{Color.BOLD}{Color.BLUE}Загрузка скаченного сохранения:{Color.END}")
+    print(f"  {options[2][0]}. {options[2][1]}")
+
+    if fixer.plugins:
+        print(f"\n{Color.BOLD}{Color.BLUE}Плагины:{Color.END}")
+        for key, text, _ in options[3:-1]:  # Все плагины до последнего пункта
+            print(f"  {key}. {text}")
+
+    # Пункт "Выход"
+    print(f"\n{Color.BOLD}{Color.BLUE}Выход:{Color.END}")
+    print(f"  {options[-1][0]}. {options[-1][1]}")
 
     print()
     choice = input(
